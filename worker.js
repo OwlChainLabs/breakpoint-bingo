@@ -3,17 +3,22 @@
 // /og/<code>.png  the card image (drawn by the og route on roast.owlchainlabs.xyz)
 const OG_RENDER = "https://roast.owlchainlabs.xyz/api/bingo-og";
 
-const fromB64 = (s) => {
-  const b = atob(s.replace(/-/g, "+").replace(/_/g, "/"));
-  return new TextDecoder().decode(Uint8Array.from(b, (c) => c.charCodeAt(0)));
-};
-const toB64 = (s) =>
-  btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const AL="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-"; // "_" marks an own square
+const toB64=s=>btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0)));
+// short link code: 24 chars (pool index or "_"), "." marked squares as a bitmask, "." own texts
+function packCard(c,m){let own=[],mask=0;const s=c.map(v=>typeof v==="number"?AL[v]:(own.push(v),"_")).join("");for(const i of m)if(i!==12)mask+=2**i;return s+"."+mask.toString(36)+(own.length?"."+toB64(JSON.stringify(own)):"")}
+function unpackCard(code){
+  if(code.startsWith("eyJ")){const d=JSON.parse(b64d(code));return{c:d.c,m:d.m||[]}} // first links
+  const [s,mk,o]=code.split(".");if(!s||s.length!==24)throw 0;const own=o?JSON.parse(b64d(o)):[];let k=0;
+  const c=[...s].map(ch=>{if(ch==="_")return String(own[k++]??"").slice(0,60);const n=AL.indexOf(ch);if(n<0)throw 0;return n});
+  const mask=parseInt(mk||"0",36),m=[];for(let i=0;i<25;i++)if(mask&(2**i))m.push(i);return{c,m};
+}
 
 async function cardTexts(code, env, origin) {
   if (code.length > 4000) return null;
   try {
-    const d = JSON.parse(fromB64(code));
+    const d = unpackCard(code);
     if (!Array.isArray(d.c) || d.c.length !== 24) return null;
     const pool = await env.ASSETS.fetch(new Request(origin + "/pool.json")).then((r) => r.json());
     const c = d.c.map((v) => (typeof v === "number" ? pool[v] ?? "?" : String(v).slice(0, 60)));
@@ -28,7 +33,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    let m = url.pathname.match(/^\/og\/([A-Za-z0-9_-]+)\.png$/);
+    let m = url.pathname.match(/^\/og\/([A-Za-z0-9_.-]+)\.png$/);
     if (m) {
       const card = await cardTexts(m[1], env, url.origin);
       if (!card) return env.ASSETS.fetch(new Request(url.origin + "/og.png"));
@@ -37,7 +42,7 @@ export default {
       return new Response(res.body, { headers: { "content-type": "image/png", "cache-control": "public, max-age=86400" } });
     }
 
-    m = url.pathname.match(/^\/c\/([A-Za-z0-9_-]+)\/?$/);
+    m = url.pathname.match(/^\/c\/([A-Za-z0-9_.-]+)\/?$/);
     if (m) {
       const page = await env.ASSETS.fetch(new Request(url.origin + "/"));
       const card = await cardTexts(m[1], env, url.origin);

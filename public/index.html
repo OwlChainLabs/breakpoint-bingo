@@ -128,13 +128,20 @@ const pos=i=>i<12?i:i-1; // grid index (0-24, not 12) -> cells index
 function rnd(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function shuffled(seed){const r=rnd(seed),p=POOL.map((_,i)=>i);for(let i=p.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[p[i],p[j]]=[p[j],p[i]]}return p.slice(0,24)}
 
-// short link code: base64url of {c,m}
-function encode(){const json=JSON.stringify({c:cells,m:[...marked].filter(i=>i!==12)});return btoa(String.fromCharCode(...new TextEncoder().encode(json))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
-function decode(code){
-  const b=atob(code.replace(/-/g,"+").replace(/_/g,"/"));const d=JSON.parse(new TextDecoder().decode(Uint8Array.from(b,c=>c.charCodeAt(0))));
-  if(!Array.isArray(d.c)||d.c.length!==24)throw 0;
-  return{c:d.c.map(v=>typeof v==="number"?v:String(v).slice(0,60)),m:new Set([12,...(d.m||[]).filter(i=>Number.isInteger(i)&&i>=0&&i<25)])};
+const AL="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-"; // "_" marks an own square
+const b64e=s=>btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const b64d=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0)));
+// short link code: 24 chars (pool index or "_"), "." marked squares as a bitmask, "." own texts
+function packCard(c,m){let own=[],mask=0;const s=c.map(v=>typeof v==="number"?AL[v]:(own.push(v),"_")).join("");for(const i of m)if(i!==12)mask+=2**i;return s+"."+mask.toString(36)+(own.length?"."+b64e(JSON.stringify(own)):"")}
+function unpackCard(code){
+  if(code.startsWith("eyJ")){const d=JSON.parse(b64d(code));return{c:d.c,m:d.m||[]}} // first links
+  const [s,mk,o]=code.split(".");if(!s||s.length!==24)throw 0;const own=o?JSON.parse(b64d(o)):[];let k=0;
+  const c=[...s].map(ch=>{if(ch==="_")return String(own[k++]??"").slice(0,60);const n=AL.indexOf(ch);if(n<0)throw 0;return n});
+  const mask=parseInt(mk||"0",36),m=[];for(let i=0;i<25;i++)if(mask&(2**i))m.push(i);return{c,m};
 }
+function encode(){return packCard(cells,marked)}
+function decode(code){const d=unpackCard(code);if(!Array.isArray(d.c)||d.c.length!==24)throw 0;
+  return{c:d.c.map(v=>typeof v==="number"?v:String(v).slice(0,60)),m:new Set([12,...d.m.filter(i=>Number.isInteger(i)&&i>=0&&i<25)])}}
 
 function save(){if(!viewing)try{localStorage.setItem("bpbingo2",JSON.stringify({c:cells,m:[...marked],mode}))}catch(e){}}
 function loadOwn(){
@@ -225,7 +232,7 @@ $("dl").onclick=()=>{
 
 (async()=>{
   try{POOL=await fetch("/pool.json").then(r=>r.json())}catch(e){POOL=[]}
-  const m=location.pathname.match(/^\/c\/([A-Za-z0-9_-]+)/);
+  const m=location.pathname.match(/^\/c\/([A-Za-z0-9_.-]+)/);
   if(m){try{const d=decode(m[1]);cells=d.c;marked=d.m;viewing=true;mode="mark"}catch(e){}}
   if(viewing){
     document.body.classList.add("viewing");["own","actions","sub"].forEach(id=>$(id).classList.add("hide"));$("banner").classList.remove("hide");
