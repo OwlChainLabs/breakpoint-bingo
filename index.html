@@ -53,7 +53,7 @@ canvas{display:none}
 
   <p class="foot">just for fun, not affiliated with solana foundation or breakpoint.<br>open source · built by <a href="https://x.com/OwlChainLabs">@OwlChainLabs</a></p>
 </main>
-<canvas id="cv" width="1200" height="1350"></canvas>
+<canvas id="cv" width="1200" height="1420"></canvas>
 <script>
 const SITE="bingo.owlchainlabs.xyz";
 const BP=new Date("2026-11-16T00:00:00Z"); // ~35 days after 12 oct 2026
@@ -103,7 +103,7 @@ countdown();
 function wrap(x,t,cx,y,maxW,lh){const words=t.replace(/<br>/g," ").split(" ");let line="",lines=[];for(const w of words){const tt=line?line+" "+w:w;if(x.measureText(tt).width>maxW&&line){lines.push(line);line=w}else line=tt}lines.push(line);const sy=y-(lines.length-1)*lh/2;lines.forEach((l,i)=>x.fillText(l,cx,sy+i*lh))}
 document.getElementById("dl").onclick=()=>{
   const c=document.getElementById("cv"),x=c.getContext("2d");
-  const g=x.createRadialGradient(600,0,50,600,0,1300);g.addColorStop(0,"#141a33");g.addColorStop(1,"#0a0d1a");x.fillStyle=g;x.fillRect(0,0,1200,1350);
+  const g=x.createRadialGradient(600,0,50,600,0,1300);g.addColorStop(0,"#141a33");g.addColorStop(1,"#0a0d1a");x.fillStyle=g;x.fillRect(0,0,1200,1420);
   x.fillStyle="#f2f2f5";x.font="800 64px system-ui,sans-serif";x.fillText("🎯 breakpoint bingo",60,110);
   const lg=x.createLinearGradient(60,0,360,0);lg.addColorStop(0,"#9945ff");lg.addColorStop(1,"#14f195");x.fillStyle=lg;x.fillRect(60,140,240,8);
   const S=208,G=10,ox=60,oy=190;x.textAlign="center";x.textBaseline="middle";
@@ -113,8 +113,8 @@ document.getElementById("dl").onclick=()=>{
     x.fillStyle=marked.has(i)?"#0a0d1a":"#f2f2f5";x.font=(i===12?"800 34px":"600 24px")+" system-ui,sans-serif";
     wrap(x,t,cx+S/2,cy+S/2,S-24,30)});
   x.textAlign="left";x.textBaseline="alphabetic";
-  x.fillStyle="#9aa0b8";x.font="500 32px system-ui,sans-serif";x.fillText("get yours → "+SITE,60,1300);
-  x.fillStyle="#f2f2f5";x.font="800 32px system-ui,sans-serif";x.fillText("owlchain",880,1300);x.fillStyle="#14f195";x.fillText("labs",1018,1300);
+  x.fillStyle="#9aa0b8";x.font="500 32px system-ui,sans-serif";x.fillText("get yours → "+SITE,60,1370);
+  x.fillStyle="#f2f2f5";x.font="800 32px system-ui,sans-serif";{const w1=x.measureText("owlchain").width,w2=x.measureText("labs").width,lx=1140-w1-w2;x.fillText("owlchain",lx,1370);x.fillStyle="#14f195";x.fillText("labs",lx+w1,1370);}
   const a=document.createElement("a");a.download="breakpoint-bingo.png";a.href=c.toDataURL("image/png");a.click();
 };
 load();
